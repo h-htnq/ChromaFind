@@ -3,40 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <title>ChromaFind</title>
-  
+
   <!-- Google Fonts のインポート -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  
-  <!-- Font Awesome のインポート -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-dO8E0x6Eo3iI0A+j/DchRCnKmKLw8BZho8gMWFUIxZlLRZ4RukMZwKcZ7ADIFNby6rg8HLhtF0vKT9v9Lci2mA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
   <style>
     /* 全体の背景とフォント設定 */
     body {
       min-width: 300px;
       max-width: 350px;
+      max-height: 600px;
       padding: 16px;
       font-family: 'Roboto', sans-serif;
-      background: linear-gradient(135deg, #1E1E1E, #2E2E2E); /* ダークグラデーション */
+      background: linear-gradient(135deg, #1E1E1E, #2E2E2E);
       color: #E0E0E0;
-      position: relative;
       margin: 0;
       box-sizing: border-box;
+      overflow-y: auto;
     }
 
-    /* アイコンとタイトルのコンテナ */
+    /* ヘッダーのスタイル */
     .header {
       display: flex;
       align-items: center;
-      justify-content: center;
       margin-bottom: 16px;
+    }
+
+    /* 左側のボタン */
+    .header-left {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin-right: 8px;
+    }
+
+    /* 中央のタイトルとアイコン */
+    .header-center {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      margin-left: 5px; /* タイトルとアイコンを右に寄せる */
+    }
+
+    /* 右側のボタンとテキスト */
+    .header-right {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
     }
 
     /* アイコンのスタイル */
     .logo {
       width: 32px;
       height: 32px;
-      margin-right: 8px;
+      margin-right: 4px;
     }
 
     /* タイトルのスタイル */
@@ -45,6 +65,93 @@
       color: #FFFFFF;
       font-size: 20px;
       font-weight: 700;
+      text-align: left;
+    }
+
+    /* クリアボタンのスタイル */
+    #clearButton {
+      padding: 4px 8px;
+      background: linear-gradient(135deg, #B22222, #CD5C5C); /* 明るい赤のグラデーションに変更 */
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #ffffff;
+      transition: background 0.3s;
+    }
+
+    #clearButton:hover {
+      background: linear-gradient(135deg, #CD5C5C, #B22222); /* ホバー時の赤色 */
+    }
+
+    /* 正規表現トグルスイッチのコンテナ */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      background: linear-gradient(135deg, #8A2BE2, #4B0082);
+      padding: 4px 8px;
+      border-radius: 12px;
+      transition: background 0.3s;
+    }
+
+    .switch-container:hover {
+      background: linear-gradient(135deg, #9A32CD, #551A8B);
+    }
+
+    .switch-label {
+      margin-right: 6px;
+      font-size: 12px;
+      color: #FFFFFF;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 18px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #555555;
+      transition: 0.4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #32CD32;
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px #32CD32;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(18px);
     }
 
     /* テキストエリアコンテナのスタイル */
@@ -80,7 +187,7 @@
 
     /* テキストエリアのフォーカス時のスタイル */
     textarea:focus {
-      border-color: #6A5ACD; /* スレートブルー */
+      border-color: #6A5ACD;
       outline: none;
       box-shadow: 0 0 10px rgba(106, 90, 205, 0.5);
     }
@@ -92,116 +199,37 @@
       margin-top: 4px;
     }
 
-    /* ボタンコンテナのスタイル */
-    #buttons {
+    /* 検索語ボタンのコンテナ */
+    #searchTermsContainer {
       display: flex;
-      justify-content: space-between;
-      margin-top: 16px;
-    }
-
-    /* アクションボタンの共通スタイル */
-    .action-button {
-      flex: 1;
-      padding: 12px 16px;
-      margin: 0 4px;
-      color: #ffffff; /* テキスト色を黒に */
-      font-weight: bold; /* 太字に */
-      border: none;
-      border-radius: 24px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* ハイライトボタンのスタイル */
-    #highlightButton {
-      background: linear-gradient(135deg, #36D1DC, #5B86E5); /* ブルーグラデーション */
-    }
-
-    #highlightButton:hover {
-      background: linear-gradient(135deg, #5B86E5, #36D1DC);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    /* クリアボタンのスタイル */
-    #clearButton {
-      background: linear-gradient(135deg, #ff416c, #ff4b2b); /* レッドグラデーション */
-    }
-
-    #clearButton:hover {
-      background: linear-gradient(135deg, #ff4b2b, #ff416c);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    /* ナビゲーションボタンコンテナのスタイル */
-    #navigation-buttons {
-      display: flex;
-      justify-content: space-between;
+      flex-direction: column;
+      flex-wrap: nowrap;
       margin-top: 12px;
+      max-height: 150px;
+      overflow-y: auto;
     }
 
-    /* ナビゲーションボタンの共通スタイル */
-    .nav-button {
-      flex: 1;
-      padding: 10px 14px;
-      margin: 0 4px;
-      color: #ffffff; /* テキスト色を黒に */
-      font-weight: bold; /* 太字に */
+    /* 検索語ボタンのスタイル */
+    .term-button {
+      padding: 8px 12px;
+      margin: 4px 0;
       border: none;
-      border-radius: 24px;
+      border-radius: 16px;
       cursor: pointer;
       font-size: 14px;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      color: #ffffff;
+      transition: opacity 0.3s;
+      text-align: left;
     }
 
-    /* 前へボタンのスタイル */
-    #prevButton {
-      background: linear-gradient(135deg, #11998e, #38ef7d); /* グリーングラデーション */
+    .term-button.disabled {
+      background-color: #555555;
+      cursor: default;
+      opacity: 0.6;
     }
 
-    #prevButton:hover {
-      background: linear-gradient(135deg, #38ef7d, #11998e);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    /* 次へボタンのスタイル（前へボタンと同じに設定） */
-    #nextButton {
-      background: linear-gradient(135deg, #11998e, #38ef7d); /* グリーングラデーション */
-    }
-
-    #nextButton:hover {
-      background: linear-gradient(135deg, #38ef7d, #11998e);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-    }
-
-    /* 閉じるボタンのスタイル */
-    #closeButton {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: #A1A1AA;
-      transition: color 0.3s;
-    }
-
-    /* 閉じるボタンのホバー時のスタイル */
-    #closeButton:hover {
-      color: #FFFFFF;
+    .term-button:not(.disabled):hover {
+      opacity: 0.8;
     }
 
     /* フッターのスタイル */
@@ -227,7 +255,7 @@
         min-width: 250px;
         padding: 12px;
       }
-      
+
       h2 {
         font-size: 18px;
       }
@@ -237,50 +265,74 @@
         font-size: 13px;
       }
 
-      .action-button, .nav-button {
+      .term-button {
         font-size: 13px;
-        padding: 8px 10px;
+        padding: 6px 10px;
       }
 
-      #closeButton {
-        font-size: 18px;
+      #clearButton {
+        font-size: 11px;
+        padding: 4px 8px;
+      }
+
+      .switch {
+        width: 30px;
+        height: 14px;
+      }
+
+      .slider:before {
+        height: 10px;
+        width: 10px;
+        left: 2px;
+        bottom: 2px;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(16px);
+      }
+
+      .switch-label {
+        font-size: 11px;
+      }
+
+      .switch-container {
+        padding: 4px 8px;
       }
     }
   </style>
 </head>
 <body>
-  <!-- 閉じるボタン -->
-  <button id="closeButton" title="閉じる"><i class="fas fa-times"></i></button>
-  
-  <!-- アイコンとタイトル -->
   <div class="header">
-    <img src="icons/icon-48.png" alt="ChromaFind Logo" class="logo">
-    <h2>ChromaFind</h2>
+    <div class="header-left">
+      <!-- クリアボタン -->
+      <button id="clearButton" title="ハイライトをクリア">クリア</button>
+    </div>
+    <div class="header-center">
+      <!-- アイコンとタイトル -->
+      <img src="icons/icon-48.png" alt="ChromaFind Logo" class="logo">
+      <h2>ChromaFind</h2>
+    </div>
+    <div class="header-right">
+      <!-- 正規表現トグルスイッチとラベル -->
+      <label class="switch-container" title="正規表現モードを切り替え">
+        <span class="switch-label">正規表現</span>
+        <label class="switch">
+          <input type="checkbox" id="regexToggle">
+          <span class="slider"></span>
+        </label>
+      </label>
+    </div>
   </div>
-  
+
   <div class="textarea-container">
-    <textarea id="searchInput" placeholder="検索文字列（複数行）"></textarea>
-    <div class="instructions">各行に検索文字列を入力。改行で区切ると色が変わります。</div>
-  </div>
-  
-  <div id="buttons">
-    <button id="highlightButton" class="action-button">
-      <i class="fas fa-highlighter" style="margin-right: 8px;"></i>ハイライト
-    </button>
-    <button id="clearButton" class="action-button">
-      <i class="fas fa-trash-alt" style="margin-right: 8px;"></i>クリア
-    </button>
+    <textarea id="searchInput" placeholder="検索文字列（複数行）&#10;&#10;※テキスト入力エリアは検索の対象外です。"></textarea>
+    <div class="instructions">各行に検索文字列を入力し、Enterキーを押してください。</div>
   </div>
 
-  <div id="navigation-buttons">
-    <button id="prevButton" class="nav-button">
-      <i class="fas fa-arrow-up" style="margin-right: 8px;"></i>前へ
-    </button>
-    <button id="nextButton" class="nav-button">
-      次へ <i class="fas fa-arrow-down" style="margin-left: 8px;"></i>
-    </button>
-  </div>
+  <!-- 検索語ボタンのコンテナ -->
+  <div id="searchTermsContainer"></div>
 
+  <!-- フッター -->
   <div class="footer">
     <p>ChromaFind</p>
   </div>

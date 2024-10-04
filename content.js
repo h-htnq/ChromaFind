@@ -1,133 +1,190 @@
-// content.js
+// ハイライトを適用する関数
+function highlightText(terms, isRegexMode, colors) {
+  removeHighlights();  // 既存のハイライトを削除
 
-// 既存のハイライトをクリアする関数
-function clearHighlights() {
-    const highlightedElements = document.querySelectorAll('span.custom-highlight');
-    highlightedElements.forEach(span => {
+  if (!terms || terms.length === 0) {
+      return;
+  }
+
+  const regexFlags = 'gi';  // グローバルかつ大文字小文字を区別しないフラグ
+  let regexList = [];
+
+  if (isRegexMode) {
+      try {
+          regexList = terms.map(term => new RegExp(term, regexFlags));
+      } catch (e) {
+          console.error('正規表現が無効です:', e);
+          return;
+      }
+  } else {
+      regexList = terms.map(term => new RegExp(escapeRegExp(term), regexFlags));
+  }
+
+  // テキストノードを再帰的に処理してハイライトを適用
+  walkTextNodes(document.body, node => {
+      let parent = node.parentNode;
+      let text = node.nodeValue;
+
+      regexList.forEach((regex, index) => {
+          let matches;
+          let lastIndex = 0;  // ハイライト済みのテキストを追跡するインデックス
+
+          while ((matches = regex.exec(text)) !== null) {
+              if (parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') return; // スクリプトやスタイルタグは無視
+
+              // マッチしたテキストをハイライト
+              let span = document.createElement('span');
+              span.className = `chroma-highlight chroma-highlight-${index}`;
+              span.style.backgroundColor = colors[index];
+              span.textContent = matches[0];
+
+              // マッチした部分の前のテキストを保持
+              const beforeMatch = document.createTextNode(text.substring(lastIndex, matches.index));
+              const afterMatch = document.createTextNode(text.substring(matches.index + matches[0].length));
+
+              // ハイライトを挿入
+              parent.insertBefore(beforeMatch, node);
+              parent.insertBefore(span, beforeMatch.nextSibling);
+              parent.insertBefore(afterMatch, span.nextSibling);
+
+              parent.removeChild(node); // 元のテキストノードを削除
+              node = afterMatch;  // 残りのテキストノードを処理
+              lastIndex = matches.index + matches[0].length;
+              regex.lastIndex = lastIndex; // 次のマッチを探すためにインデックスを更新
+          }
+      });
+  });
+
+  // スタイルの注入
+  injectStyles(colors);
+}
+
+// ハイライトを削除する関数
+function removeHighlights() {
+  const highlights = document.querySelectorAll('.chroma-highlight');
+  highlights.forEach(span => {
       const parent = span.parentNode;
       parent.replaceChild(document.createTextNode(span.textContent), span);
-      parent.normalize(); // テキストノードを統合
-    });
-  }
-  
-  // テキストノードを検索してハイライトする関数
-  function highlightText(searchTerms) {
-    if (!searchTerms || searchTerms.length === 0) return;
-  
-    searchTerms.forEach(({ term, color }) => {
-      if (!term.trim()) return; // 空の検索語はスキップ
-  
-      const regex = new RegExp(`(${escapeRegExp(term)})`, 'gi');
-  
-      traverseAndHighlight(document.body, regex, color);
-    });
-  
-    // ハイライトされた要素を更新
-    updateHighlightedElements();
-  }
-  
-  // テキストを安全に扱うためのエスケープ関数
-  function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-  
-  // DOMを再帰的にトラバースし、テキストノードをハイライトする関数
-  function traverseAndHighlight(node, regex, color) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const matches = node.nodeValue.match(regex);
-      if (matches) {
-        const parent = node.parentNode;
-        const frag = document.createDocumentFragment();
-        let lastIndex = 0;
-  
-        node.nodeValue.replace(regex, (match, p1, offset) => {
-          // テキストの前半部分
-          const textBefore = node.nodeValue.substring(lastIndex, offset);
-          if (textBefore) {
-            frag.appendChild(document.createTextNode(textBefore));
-          }
-  
-          // ハイライト部分
-          const span = document.createElement('span');
-          span.textContent = match;
-          span.style.backgroundColor = color;
-          span.classList.add('custom-highlight');
-          frag.appendChild(span);
-  
-          lastIndex = offset + match.length;
-        });
-  
-        // 残りのテキスト
-        const textAfter = node.nodeValue.substring(lastIndex);
-        if (textAfter) {
-          frag.appendChild(document.createTextNode(textAfter));
-        }
-  
-        parent.replaceChild(frag, node);
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE') {
-      // スクリプトやスタイルタグ内はスキップ
-      Array.from(node.childNodes).forEach(child => traverseAndHighlight(child, regex, color));
-    }
-  }
-  
-  // ハイライトされた要素のリストと現在のインデックス
-  let highlightedElements = [];
-  let currentIndex = -1;
-  
-  // ハイライトされた要素を更新する関数
-  function updateHighlightedElements() {
-    highlightedElements = Array.from(document.querySelectorAll('span.custom-highlight'));
-    if (highlightedElements.length > 0) {
-      currentIndex = 0;
-      scrollToElement(highlightedElements[currentIndex]);
-    } else {
-      currentIndex = -1;
-    }
-  }
-  
-  // 要素にスクロールする関数
-  function scrollToElement(element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // フォーカスを当該要素に移す（視認性向上のため）
-    element.style.outline = '2px solid red';
-    setTimeout(() => {
-      element.style.outline = '';
-    }, 1000);
-  }
-  
-  // 次の要素にスクロールする関数
-  function scrollNext() {
-    if (highlightedElements.length === 0) return;
-    currentIndex = (currentIndex + 1) % highlightedElements.length;
-    scrollToElement(highlightedElements[currentIndex]);
-  }
-  
-  // 前の要素にスクロールする関数
-  function scrollPrev() {
-    if (highlightedElements.length === 0) return;
-    currentIndex = (currentIndex - 1 + highlightedElements.length) % highlightedElements.length;
-    scrollToElement(highlightedElements[currentIndex]);
-  }
-  
-  // メッセージを受信してハイライトやスクロールを実行
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === "highlight") {
-      clearHighlights();
-      const searchTerms = message.searchTerms;
-  
-      if (!searchTerms || searchTerms.length === 0) {
-        sendResponse({ status: "ハイライトをクリアしました" });
-        return;
-      }
-  
-      highlightText(searchTerms);
-      sendResponse({ status: "ハイライトしました" });
-    } else if (message.action === "scrollNext") {
-      scrollNext();
-      sendResponse({ status: "次のハイライトへスクロールしました" });
-    } else if (message.action === "scrollPrev") {
-      scrollPrev();
-      sendResponse({ status: "前のハイライトへスクロールしました" });
-    }
+      parent.normalize();
   });
+
+  // 既存のスタイルも削除
+  const existingStyle = document.getElementById('chroma-find-styles');
+  if (existingStyle) {
+      existingStyle.remove();
+  }
+}
+
+// テキストノードを探索する関数
+function walkTextNodes(node, callback) {
+  if (node.nodeType === Node.TEXT_NODE) {
+      callback(node);
+  } else if (
+      node.nodeType === Node.ELEMENT_NODE &&
+      node.nodeName !== 'SCRIPT' &&
+      node.nodeName !== 'STYLE' &&
+      node.contentEditable !== 'true' &&
+      !node.classList.contains('no-highlight') &&
+      node.closest('.no-highlight') === null
+  ) {
+      let childNodes = Array.from(node.childNodes);  // 子ノードのリストを事前に取得
+      for (let child of childNodes) {
+          walkTextNodes(child, callback);
+      }
+  }
+}
+
+// 正規表現をエスケープする関数
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// スタイルを注入する関数
+function injectStyles(colors) {
+  const existingStyle = document.getElementById('chroma-find-styles');
+  if (existingStyle) {
+      existingStyle.remove();
+  }
+
+  const style = document.createElement('style');
+  style.id = 'chroma-find-styles';
+  style.textContent = `
+      .chroma-highlight {
+          background-color: transparent;
+          display: inline;
+          color: inherit;
+      }
+
+      .chroma-highlight-active {
+          outline: 2px solid #FF0000 !important;
+      }
+
+      ${colors.map((color, index) => `
+      .chroma-highlight-${index} {
+          background-color: ${color};
+      }
+      `).join('\n')}
+  `;
+  document.head.appendChild(style);
+}
+
+// 特定の用語にスクロールする関数
+function scrollToTerm(term, isRegexMode) {
+  let regex;
+  const regexFlags = 'gi';
+
+  if (isRegexMode) {
+      try {
+          regex = new RegExp(term, regexFlags);
+      } catch (e) {
+          console.error('正規表現が無効です:', e);
+          return;
+      }
+  } else {
+      regex = new RegExp(escapeRegExp(term), regexFlags);
+  }
+
+  const highlights = document.querySelectorAll('.chroma-highlight');
+  for (let highlight of highlights) {
+      if (regex.test(highlight.textContent)) {
+          highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlight.classList.add('chroma-highlight-active');
+          setTimeout(() => {
+              highlight.classList.remove('chroma-highlight-active');
+          }, 2000);
+          break;
+      }
+  }
+}
+
+// ページロード時に保存された検索語を取得してハイライトを適用
+window.addEventListener('load', () => {
+  browser.storage.local.get(['searchTerms', 'isRegexMode', 'highlightColors']).then((result) => {
+      const terms = result.searchTerms || [];
+      const isRegexMode = result.isRegexMode || false;
+      const colors = result.highlightColors || [
+          '#FFD700', '#32CD32', '#00CED1', '#FF69B4', '#FFA500',
+          '#BA55D3', '#1E90FF', '#ADFF2F', '#FFB6C1', '#D3D3D3'
+      ];
+
+      if (terms.length > 0) {
+          highlightText(terms, isRegexMode, colors);
+      }
+  }).catch((error) => {
+      console.error('Error retrieving search terms from storage:', error);
+  });
+});
+
+// メッセージを受信してハイライトを適用またはスクロール
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === 'highlight') {
+      const terms = message.terms;
+      const isRegexMode = message.isRegexMode;
+      const colors = message.colors;
+      highlightText(terms, isRegexMode, colors);
+  } else if (message.action === 'scrollToTerm') {
+      scrollToTerm(message.term, message.isRegexMode);
+  } else if (message.action === 'clearHighlights') {
+      removeHighlights();
+  }
+});
