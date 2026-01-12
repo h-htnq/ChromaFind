@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <title>ChromaFind</title>
@@ -42,7 +43,8 @@
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      margin-left: 5px; /* タイトルとアイコンを右に寄せる */
+      margin-left: 5px;
+      /* タイトルとアイコンを右に寄せる */
     }
 
     /* 右側のボタンとテキスト */
@@ -71,7 +73,8 @@
     /* クリアボタンのスタイル */
     #clearButton {
       padding: 4px 8px;
-      background: linear-gradient(135deg, #B22222, #CD5C5C); /* 明るい赤のグラデーションに変更 */
+      background: linear-gradient(135deg, #B22222, #CD5C5C);
+      /* 明るい赤のグラデーションに変更 */
       border: none;
       border-radius: 12px;
       cursor: pointer;
@@ -81,7 +84,8 @@
     }
 
     #clearButton:hover {
-      background: linear-gradient(135deg, #CD5C5C, #B22222); /* ホバー時の赤色 */
+      background: linear-gradient(135deg, #CD5C5C, #B22222);
+      /* ホバー時の赤色 */
     }
 
     /* 正規表現トグルスイッチのコンテナ */
@@ -142,15 +146,15 @@
       border-radius: 50%;
     }
 
-    input:checked + .slider {
+    input:checked+.slider {
       background-color: #32CD32;
     }
 
-    input:focus + .slider {
+    input:focus+.slider {
       box-shadow: 0 0 1px #32CD32;
     }
 
-    input:checked + .slider:before {
+    input:checked+.slider:before {
       transform: translateX(18px);
     }
 
@@ -287,7 +291,7 @@
         bottom: 2px;
       }
 
-      input:checked + .slider:before {
+      input:checked+.slider:before {
         transform: translateX(16px);
       }
 
@@ -301,6 +305,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="header">
     <div class="header-left">
@@ -325,7 +330,7 @@
   </div>
 
   <div class="textarea-container">
-    <textarea id="searchInput" placeholder="検索文字列（複数行）&#10;&#10;※テキスト入力エリアは検索の対象外です。"></textarea>
+    <textarea id="searchInput" placeholder="検索文字列（複数行）"></textarea>
     <div class="instructions">各行に検索文字列を入力し、Enterキーを押してください。</div>
   </div>
 
@@ -339,4 +344,5 @@
 
   <script src="popup.js"></script>
 </body>
+
 </html>
