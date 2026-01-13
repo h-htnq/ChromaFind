@@ -158,9 +158,22 @@ function highlightText(terms, isRegexMode, colors) {
             try { return { regex: new RegExp(term, regexFlags), termIndex: index, term: term, color: colors[index] }; }
             catch (e) { console.error('正規表現が無効です:', term, e); return null; }
         } else {
-            const escapedTerm = escapeRegExp(term);
-            try { return { regex: new RegExp(escapedTerm, regexFlags), termIndex: index, term: term, color: colors[index] }; }
-            catch (e) { console.error('Error creating RegExp from escaped term:', escapedTerm, e); return null; }
+            // 検索語の前後の空白をトリムし、内部の空白文字を柔軟にマッチ
+            const trimmedTerm = term.trim();
+            if (trimmedTerm === '') return null;
+            
+            // まず正規表現の特殊文字をエスケープ
+            const escapedTerm = escapeRegExp(trimmedTerm);
+            // その後、エスケープされたスペースを \s+ に置換（空白文字を柔軟にマッチ）
+            const flexibleTerm = escapedTerm.replace(/\\ /g, '\\s+').replace(/\s+/g, '\\s+');
+            
+            console.log('Original term:', JSON.stringify(term));
+            console.log('Trimmed term:', JSON.stringify(trimmedTerm));
+            console.log('Escaped term:', escapedTerm);
+            console.log('Flexible term:', flexibleTerm);
+            
+            try { return { regex: new RegExp(flexibleTerm, regexFlags), termIndex: index, term: term, color: colors[index] }; }
+            catch (e) { console.error('Error creating RegExp from flexible term:', flexibleTerm, e); return null; }
         }
     }).filter(Boolean);
 
@@ -174,11 +187,23 @@ function highlightText(terms, isRegexMode, colors) {
         processedNodes.add(node);
 
         const text = node.nodeValue;
+        if (text.includes('smtp1') || text.includes('CentOS5') || text.includes('rphsmta101')) {
+            console.log('Found potential match in node:', JSON.stringify(text));
+            console.log('Node text length:', text.length);
+            // 文字コードも表示
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === ' ' || char === '　' || char === '-' || char === '>') {
+                    console.log(`Character at ${i}: "${char}" (code: ${char.charCodeAt(0)})`);
+                }
+            }
+        }
         regexList.forEach(item => {
             if (item.regex) {
                 item.regex.lastIndex = 0;
                 let match;
                 while ((match = item.regex.exec(text)) !== null) {
+                    console.log(`Match found for "${item.term}":`, match[0], 'at position', match.index);
                     allPotentialMatches.push({
                         start: match.index, end: match.index + match[0].length,
                         termIndex: item.termIndex, term: item.term, color: item.color,

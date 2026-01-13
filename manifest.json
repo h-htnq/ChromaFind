@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "ChromaFind",
-  "version": "2.1",
+  "version": "2.2",
   "description": "Search and highlight text with different colors directly within web pages.",
   "permissions": [
     "activeTab",

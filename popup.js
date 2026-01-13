@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const clearButton = document.getElementById('clearButton');
     const regexToggle = document.getElementById('regexToggle');
 
+    // テキストエリアのサイズを強制設定
+    if (searchInput) {
+        searchInput.style.height = '100px';
+        searchInput.style.minHeight = '80px';
+        console.log('Textarea height set to 80px');
+    }
+
     let termColorMap = {}; // 永続的な色のマッピング
     let scrollIndexes = {}; // スクロール状態
 
@@ -139,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ポップアップにボタンを表示
     function displaySearchButtons(terms, termCounts = {}) {
+        console.log('displaySearchButtons called with:', terms, termCounts);
         searchTermsContainer.innerHTML = '';
 
         // 重複する単語を除去し、最初に出現した順序を保持
@@ -151,10 +159,36 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        console.log('uniqueTerms:', uniqueTerms);
+
+        // ボタンがある場合はリサイズ可能にし、ない場合は非表示
+        if (uniqueTerms.length > 0) {
+            searchTermsContainer.style.display = 'flex';
+            searchTermsContainer.style.minHeight = '50px';
+            searchTermsContainer.style.height = 'auto';
+            searchTermsContainer.style.maxHeight = '400px';
+            searchTermsContainer.style.overflowY = 'auto';
+            searchTermsContainer.style.resize = 'vertical';
+            searchTermsContainer.style.border = 'none';
+            searchTermsContainer.style.padding = '8px';
+            searchTermsContainer.style.backgroundColor = 'transparent';
+            searchTermsContainer.classList.add('has-buttons');
+        } else {
+            searchTermsContainer.style.display = 'none';
+            searchTermsContainer.style.minHeight = '0';
+            searchTermsContainer.style.height = '0';
+            searchTermsContainer.style.maxHeight = '0';
+            searchTermsContainer.style.overflowY = 'hidden';
+            searchTermsContainer.style.resize = 'none';
+            searchTermsContainer.style.border = 'none';
+            searchTermsContainer.style.padding = '0';
+            searchTermsContainer.classList.remove('has-buttons');
+        }
+
         uniqueTerms.forEach(term => {
             const count = termCounts[term] || 0;
             const button = document.createElement('button');
-            
+
             if (count > 0) {
                 // 検索結果がある場合
                 button.textContent = `${term} (${count})`;
@@ -185,12 +219,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 button.style.color = '#666666';
                 button.style.opacity = '0.6';
                 button.style.cursor = 'default';
-                
+
                 // クリックイベントは追加しない（無効化）
             }
-            
+
+            console.log('Adding button:', button.textContent);
             searchTermsContainer.appendChild(button);
         });
+
+        console.log('Buttons added to container. Container children count:', searchTermsContainer.children.length);
     }
 
     // ページ上のハイライトを消す指示を出す

@@ -9,18 +9,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
   <style>
+    /* HTML全体の設定 */
+    html {
+      width: 550px;
+      height: auto;
+      overflow: hidden;
+    }
+
     /* 全体の背景とフォント設定 */
     body {
-      min-width: 300px;
-      max-width: 350px;
-      max-height: 600px;
+      min-width: 500px;
+      max-width: 600px;
+      width: 550px;
+      height: auto;
+      max-height: none;
       padding: 16px;
       font-family: 'Roboto', sans-serif;
       background: linear-gradient(135deg, #1E1E1E, #2E2E2E);
       color: #E0E0E0;
       margin: 0;
       box-sizing: border-box;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     /* ヘッダーのスタイル */
@@ -43,7 +52,7 @@
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      margin-left: 5px;
+      margin-left: 85px;
       /* タイトルとアイコンを右に寄せる */
     }
 
@@ -205,18 +214,40 @@
 
     /* 検索語ボタンのコンテナ */
     #searchTermsContainer {
-      display: flex;
+      display: none;
       flex-direction: column;
       flex-wrap: nowrap;
       margin-top: 12px;
-      max-height: 150px;
+      max-height: 400px;
       overflow-y: auto;
+      overflow-x: hidden;
+      border-radius: 6px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    /* 検索ボタンがある場合のリサイズハンドル */
+    #searchTermsContainer.has-buttons::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      width: 12px;
+      height: 12px;
+      background-image:
+        linear-gradient(45deg, transparent 0%, transparent 30%, #888 30%, #888 40%, transparent 40%),
+        linear-gradient(45deg, transparent 40%, transparent 50%, #888 50%, #888 60%, transparent 60%),
+        linear-gradient(45deg, transparent 60%, transparent 70%, #888 70%, #888 80%, transparent 80%);
+      background-size: 4px 4px;
+      background-position: 0 0, 2px 2px, 4px 4px;
+      background-repeat: no-repeat;
+      pointer-events: none;
     }
 
     /* 検索語ボタンのスタイル */
     .term-button {
-      padding: 8px 12px;
-      margin: 4px 0;
+      padding: 6px 10px;
+      margin: 3px 0;
       border: none;
       border-radius: 16px;
       cursor: pointer;
@@ -224,6 +255,15 @@
       color: #ffffff;
       transition: opacity 0.3s;
       text-align: left;
+      width: 100%;
+      min-height: 32px;
+      box-sizing: border-box;
+      word-wrap: break-word;
+      white-space: normal;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
     }
 
     /* 未検知ボタンのスタイル */
@@ -244,27 +284,11 @@
       opacity: 0.8;
     }
 
-    /* フッターのスタイル */
-    .footer {
-      margin-top: 16px;
-      text-align: center;
-      font-size: 10px;
-      color: #A1A1AA;
-    }
-
-    .footer a {
-      color: #6A5ACD;
-      text-decoration: none;
-    }
-
-    .footer a:hover {
-      text-decoration: underline;
-    }
-
     /* レスポンシブデザイン */
-    @media (max-width: 400px) {
+    @media (max-width: 600px) {
       body {
-        min-width: 250px;
+        min-width: 450px;
+        width: 500px;
         padding: 12px;
       }
 
@@ -344,11 +368,6 @@
 
   <!-- 検索語ボタンのコンテナ -->
   <div id="searchTermsContainer"></div>
-
-  <!-- フッター -->
-  <div class="footer">
-    <p>ChromaFind</p>
-  </div>
 
   <script src="popup.js"></script>
 </body>
