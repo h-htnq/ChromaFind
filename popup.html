@@ -226,13 +226,21 @@
       text-align: left;
     }
 
+    /* 未検知ボタンのスタイル */
+    .term-button-not-found {
+      background-color: #cccccc !important;
+      color: #ff0000 !important;
+      opacity: 0.6 !important;
+      cursor: default !important;
+    }
+
     .term-button.disabled {
       background-color: #555555;
       cursor: default;
       opacity: 0.6;
     }
 
-    .term-button:not(.disabled):hover {
+    .term-button:not(.disabled):not(.term-button-not-found):hover {
       opacity: 0.8;
     }
 
@@ -331,7 +339,7 @@
 
   <div class="textarea-container">
     <textarea id="searchInput" placeholder="検索文字列（複数行）"></textarea>
-    <div class="instructions">各行に検索文字列を入力し、Enterキーを押してください。</div>
+    <div class="instructions">1行ずつ検索文字列を入力してください。</div>
   </div>
 
   <!-- 検索語ボタンのコンテナ -->

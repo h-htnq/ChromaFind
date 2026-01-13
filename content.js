@@ -8,181 +8,14 @@ let currentSearchContext = {
 
 /**
  * ページ上のすべての <textarea> を contenteditable な <div> に置き換える関数
+ * 注意: この機能は無効化されています（体裁崩れとテキスト入力問題のため）
  */
 function replaceTextareasWithEditableDivs() {
-    // 拡張機能のポップアップ内では実行しない
-    if (window.location.href.includes('extension://') || 
-        window.location.protocol === 'moz-extension:' ||
-        document.documentElement.getAttribute('data-extension-popup') === 'true') {
-        return;
-    }
+    // この機能は無効化されています
+    // テキスト入力の問題と体裁崩れを防ぐため
+    console.log('textarea replacement is disabled for stability');
+    return;
 
-    // data-is-replaced属性を持たないtextareaだけを対象にする
-    // ポップアップ内のtextareaは除外
-    const textareas = document.querySelectorAll('textarea:not([data-is-replaced="true"])');
-
-    textareas.forEach(textarea => {
-        // ポップアップ関連の親要素内にある場合はスキップ
-        const excludedSelectors = [
-            '.modal', '.popup', '.tooltip', '.dropdown', '.overlay', '.dialog',
-            '[role="dialog"]', '[role="alertdialog"]', '[role="tooltip"]', '[aria-modal="true"]'
-        ];
-
-        if (excludedSelectors.some(selector => textarea.closest(selector))) {
-            return; // この textarea はスキップ
-        }
-
-        // 拡張機能のポップアップ内の要素をスキップ
-        if (textarea.closest('body').classList.contains('extension-popup') || 
-            document.body.classList.contains('extension-popup') ||
-            window.location.href.includes('extension://') ||
-            window.location.protocol === 'moz-extension:') {
-            return; // 拡張機能内の textarea はスキップ
-        }
-
-        // position: fixed/absolute の親要素内にある場合もスキップ
-        let parent = textarea.parentElement;
-        while (parent && parent !== document.body) {
-            const computedStyle = window.getComputedStyle(parent);
-            if (computedStyle.position === 'fixed' || computedStyle.position === 'absolute') {
-                return; // この textarea はスキップ
-            }
-            parent = parent.parentElement;
-        }
-
-        textarea.dataset.isReplaced = 'true'; // 処理済みのマークを付ける
-
-        const editableDiv = document.createElement('div');
-        editableDiv.contentEditable = 'true';
-        editableDiv.textContent = textarea.value;
-
-        const styles = window.getComputedStyle(textarea);
-        const styleProperties = [
-            'font', 'border', 'padding', 'margin', 'width', 'height',
-            'resize', 'backgroundColor', 'color', 'lineHeight', 'boxSizing',
-            'borderRadius', 'outline'
-        ];
-        styleProperties.forEach(prop => {
-            editableDiv.style[prop] = styles[prop];
-        });
-
-        editableDiv.style.overflowY = 'auto';
-        editableDiv.style.whiteSpace = 'pre-wrap';
-        // wordWrap は非推奨なので wordBreak に変更
-        editableDiv.style.wordBreak = 'break-word';
-
-        textarea.style.display = 'none';
-        textarea.parentNode.insertBefore(editableDiv, textarea.nextSibling);
-
-        editableDiv.addEventListener('input', () => {
-            textarea.value = editableDiv.textContent;
-            
-            // 入力が止まったら再検索（遅延を短くして応答性向上）
-            clearTimeout(editableDiv.searchTimer);
-            editableDiv.searchTimer = setTimeout(() => {
-                performReSearch();
-                notifyPopupOfTextChange();
-            }, 300); // 300ms後に再検索
-        });
-
-        // フォーカス時の処理
-        editableDiv.addEventListener('focus', () => {
-            // フォーカス時は特別な処理なし
-        });
-
-        // ブラー時の処理
-        editableDiv.addEventListener('blur', () => {
-            // タイマーをクリアして即座に再検索
-            clearTimeout(editableDiv.searchTimer);
-            performReSearch();
-            notifyPopupOfTextChange();
-        });
-
-        // キーボード入力の処理を改善
-        editableDiv.addEventListener('keydown', (e) => {
-            // Enterキーで改行を許可
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const selection = window.getSelection();
-                const range = selection.getRangeAt(0);
-                const br = document.createElement('br');
-                range.deleteContents();
-                range.insertNode(br);
-                range.setStartAfter(br);
-                range.setEndAfter(br);
-                selection.removeAllRanges();
-                selection.addRange(range);
-
-                // textareaの値を更新
-                textarea.value = editableDiv.textContent;
-                
-                // Enterキー押下時に即座に再検索
-                performReSearch();
-            }
-        });
-
-        // ペースト処理の改善
-        editableDiv.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const text = (e.clipboardData || window.clipboardData).getData('text');
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                range.deleteContents();
-                range.insertNode(document.createTextNode(text));
-                range.collapse(false);
-                selection.removeAllRanges();
-                selection.addRange(range);
-            }
-
-            // textareaの値を更新
-            textarea.value = editableDiv.textContent;
-            
-            // ペースト後に再検索
-            setTimeout(() => {
-                performReSearch();
-            }, 100); // 少し遅延させてDOM更新を待つ
-        });
-
-        // MutationObserverでtextareaの値変更を監視
-        const observer = new MutationObserver(() => {
-            if (editableDiv.textContent !== textarea.value) {
-                editableDiv.textContent = textarea.value;
-            }
-        });
-        observer.observe(textarea, { attributes: true, childList: true, subtree: true, characterData: true });
-
-        // プロパティ変更も監視（JavaScriptでの.val()設定をキャッチ）
-        let lastValue = textarea.value;
-        const checkValueChange = () => {
-            if (textarea.value !== lastValue) {
-                lastValue = textarea.value;
-                editableDiv.textContent = textarea.value;
-                // ハイライトを再適用
-                if (currentSearchContext.terms.length > 0) {
-                    highlightText(currentSearchContext.terms, currentSearchContext.isRegexMode, currentSearchContext.colors);
-                }
-            }
-        };
-
-        // 定期的にチェック（JavaScriptでの値変更をキャッチするため）
-        setInterval(checkValueChange, 100);
-
-        // inputイベントも監視
-        textarea.addEventListener('input', checkValueChange);
-
-        // jQueryのval()メソッドをフック
-        if (window.jQuery) {
-            const originalVal = window.jQuery.fn.val;
-            window.jQuery.fn.val = function (value) {
-                const result = originalVal.apply(this, arguments);
-                if (arguments.length > 0 && this[0] === textarea) {
-                    setTimeout(checkValueChange, 0);
-                }
-                return result;
-            };
-        }
-    });
 }
 
 
@@ -210,7 +43,7 @@ function notifyPopupOfTextChange() {
 function performReSearch() {
     console.log('Performing re-search...');
     console.log('Current search context:', currentSearchContext);
-    
+
     if (currentSearchContext && currentSearchContext.terms && currentSearchContext.terms.length > 0) {
         try {
             const result = highlightText(currentSearchContext.terms, currentSearchContext.isRegexMode, currentSearchContext.colors);
@@ -331,10 +164,15 @@ function highlightText(terms, isRegexMode, colors) {
         }
     }).filter(Boolean);
 
-    // 長い順のソートはpopup.jsに任せる
-
     const allPotentialMatches = [];
+    const processedNodes = new Set(); // 重複処理を防ぐ
+    let matchCounter = 0; // 軽量なカウンター
+
     walkTextNodes(document.body, node => {
+        // 既に処理済みのノードはスキップ
+        if (processedNodes.has(node)) return;
+        processedNodes.add(node);
+
         const text = node.nodeValue;
         regexList.forEach(item => {
             if (item.regex) {
@@ -344,33 +182,81 @@ function highlightText(terms, isRegexMode, colors) {
                     allPotentialMatches.push({
                         start: match.index, end: match.index + match[0].length,
                         termIndex: item.termIndex, term: item.term, color: item.color,
-                        matchText: match[0], node: node
+                        matchText: match[0], node: node, matchId: ++matchCounter
                     });
                 }
             }
         });
     });
 
+    // 実際に表示されているマッチのみをカウント
     const termCounts = {};
     const finalMatchedTermsSet = new Set();
-    allPotentialMatches.forEach(match => {
-        finalMatchedTermsSet.add(match.term);
-        termCounts[match.term] = (termCounts[match.term] || 0) + 1;
-    });
-    terms.forEach(term => {
-        if (termCounts[term] === undefined) termCounts[term] = 0;
+
+    // 各検索語のカウントを初期化
+    uniqueTerms.forEach(term => {
+        termCounts[term] = 0;
     });
 
+    // ノードごとに重複を解決してから実際のマッチ数をカウント
     const matchesByNode = new Map();
     allPotentialMatches.forEach(match => {
-        if (!matchesByNode.has(match.node)) {
-            matchesByNode.set(match.node, []);
+        // 表示されている要素のマッチのみを処理
+        if (isElementVisible(match.node.parentNode)) {
+            if (!matchesByNode.has(match.node)) {
+                matchesByNode.set(match.node, []);
+            }
+            matchesByNode.get(match.node).push(match);
         }
-        matchesByNode.get(match.node).push(match);
+    });
+
+    // 各ノードで重複を解決した後の実際のマッチ数をカウント
+    matchesByNode.forEach((nodeMatches, originalNode) => {
+        if (!originalNode.parentNode) return;
+
+        // テキスト入力エリアの場合は特別な処理
+        if (originalNode.isInputElement) {
+            // テキスト入力エリアでも重複解決を行う
+            nodeMatches.sort((a, b) => {
+                if (a.start !== b.start) return a.start - b.start;
+                return b.end - a.end;
+            });
+
+            let lastEnd = -1;
+            for (const match of nodeMatches) {
+                if (match.start >= lastEnd) {
+                    finalMatchedTermsSet.add(match.term);
+                    termCounts[match.term] = (termCounts[match.term] || 0) + 1;
+                    lastEnd = match.end;
+                }
+            }
+            return;
+        }
+
+        nodeMatches.sort((a, b) => {
+            if (a.start !== b.start) return a.start - b.start;
+            return b.end - a.end;
+        });
+
+        // 重複を解決して実際にハイライトされるマッチのみをカウント
+        let lastEnd = -1;
+        for (const match of nodeMatches) {
+            if (match.start >= lastEnd) {
+                finalMatchedTermsSet.add(match.term);
+                termCounts[match.term] = (termCounts[match.term] || 0) + 1;
+                lastEnd = match.end;
+            }
+        }
     });
 
     matchesByNode.forEach((nodeMatches, originalNode) => {
         if (!originalNode.parentNode) return;
+
+        // テキスト入力エリアの場合は特別な処理
+        if (originalNode.isInputElement) {
+            handleInputElementMatches(nodeMatches, originalNode.inputElement);
+            return;
+        }
 
         nodeMatches.sort((a, b) => {
             if (a.start !== b.start) return a.start - b.start;
@@ -394,7 +280,7 @@ function highlightText(terms, isRegexMode, colors) {
             }
 
             const term = match.term;
-            const spanID = `highlight-${match.termIndex}-${allPotentialMatches.indexOf(match)}`;
+            const spanID = `highlight-${match.termIndex}-${match.matchId}`;
 
             if (!currentMatches[term]) {
                 currentMatches[term] = [];
@@ -431,7 +317,76 @@ function highlightText(terms, isRegexMode, colors) {
         }
     }
 
+    console.log('Final term counts:', termCounts); // デバッグ用ログ
     return { matchedTerms: Array.from(finalMatchedTermsSet), termCounts };
+}
+
+
+
+/**
+ * テキスト入力エリア（textarea、input）のマッチを処理する関数
+ */
+function handleInputElementMatches(nodeMatches, inputElement) {
+    // テキスト入力エリア内でも通常のテキストハイライトを適用
+    nodeMatches.sort((a, b) => {
+        if (a.start !== b.start) return a.start - b.start;
+        return b.end - a.end;
+    });
+
+    const finalNodeMatches = [];
+    let lastEnd = -1;
+    for (const match of nodeMatches) {
+        if (match.start >= lastEnd) {
+            finalNodeMatches.push(match);
+            lastEnd = match.end;
+        }
+    }
+
+    // テキスト入力エリアの値にハイライトHTMLを適用
+    let newContent = '';
+    let lastIndex = 0;
+    const originalValue = inputElement.value;
+
+    for (const match of finalNodeMatches) {
+        if (match.start > lastIndex) {
+            newContent += escapeHTML(originalValue.substring(lastIndex, match.start));
+        }
+
+        const term = match.term;
+        const spanID = `highlight-${match.termIndex}-${match.matchId}`;
+
+        if (!currentMatches[term]) {
+            currentMatches[term] = [];
+        }
+        currentMatches[term].push(spanID);
+
+        newContent += `<span id="${spanID}" class="chroma-highlight" style="background-color:${match.color}; color:${getContrastTextColor(match.color)}">${escapeHTML(match.matchText)}</span>`;
+        lastIndex = match.end;
+    }
+    if (lastIndex < originalValue.length) {
+        newContent += escapeHTML(originalValue.substring(lastIndex));
+    }
+
+    // テキスト入力エリアをcontenteditable divに一時的に変換してハイライト表示
+    if (newContent && finalNodeMatches.length > 0) {
+        const div = document.createElement('div');
+        div.innerHTML = newContent;
+        div.contentEditable = true;
+        div.className = inputElement.className + ' chroma-input-converted';
+        div.style.cssText = window.getComputedStyle(inputElement).cssText;
+        div.style.border = window.getComputedStyle(inputElement).border;
+        div.style.padding = window.getComputedStyle(inputElement).padding;
+        div.style.margin = window.getComputedStyle(inputElement).margin;
+        div.style.width = window.getComputedStyle(inputElement).width;
+        div.style.height = window.getComputedStyle(inputElement).height;
+        div.style.fontSize = window.getComputedStyle(inputElement).fontSize;
+        div.style.fontFamily = window.getComputedStyle(inputElement).fontFamily;
+
+        // 元の要素を隠してdivを表示
+        inputElement.style.display = 'none';
+        inputElement.setAttribute('data-chroma-original', 'true');
+        inputElement.parentNode.insertBefore(div, inputElement.nextSibling);
+    }
 }
 
 function escapeHTML(str) {
@@ -467,11 +422,27 @@ function removeHighlights() {
     parentsToNormalize.forEach(parent => {
         parent.normalize();
     });
+
+    // 変換されたテキスト入力エリアを元に戻す
+    const convertedDivs = document.querySelectorAll('.chroma-input-converted');
+    convertedDivs.forEach(div => {
+        div.remove();
+    });
+
+    const hiddenInputs = document.querySelectorAll('[data-chroma-original="true"]');
+    hiddenInputs.forEach(input => {
+        input.style.display = '';
+        input.removeAttribute('data-chroma-original');
+    });
 }
 
 function walkTextNodes(node, callback) {
     if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim().length > 0) {
-        if (!node.parentNode || ['SCRIPT', 'STYLE'].includes(node.parentNode.nodeName) || node.parentNode.closest('.no-highlight')) return;
+        // 親要素が表示されているかチェック
+        if (!node.parentNode ||
+            ['SCRIPT', 'STYLE'].includes(node.parentNode.nodeName) ||
+            node.parentNode.closest('.no-highlight') ||
+            !isElementVisible(node.parentNode)) return;
         callback(node);
     } else if (node.nodeType === Node.ELEMENT_NODE) {
         // ポップアップ関連の要素を除外
@@ -485,11 +456,51 @@ function walkTextNodes(node, callback) {
             excludedClasses.some(cls => node.classList.contains(cls)) ||
             excludedRoles.includes(node.getAttribute('role')) ||
             node.hasAttribute('aria-modal') ||
-            node.style.position === 'fixed' ||
-            node.style.position === 'absolute') return;
+            !isElementVisible(node)) return;
+
+        // テキスト入力エリア（textarea、input）の値もチェック
+        if (node.nodeName === 'TEXTAREA' || (node.nodeName === 'INPUT' && node.type === 'text')) {
+            if (node.value && node.value.trim()) {
+                // 仮想的なテキストノードとして処理
+                const virtualTextNode = {
+                    nodeType: Node.TEXT_NODE,
+                    nodeValue: node.value,
+                    parentNode: node,
+                    isInputElement: true,
+                    inputElement: node
+                };
+                callback(virtualTextNode);
+            }
+        }
 
         Array.from(node.childNodes).forEach(child => walkTextNodes(child, callback));
     }
+}
+
+/**
+ * 要素が実際に表示されているかどうかをチェックする関数
+ */
+function isElementVisible(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) return true;
+
+    // 計算されたスタイルを取得
+    const style = window.getComputedStyle(element);
+
+    // 非表示の条件をチェック
+    if (style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.opacity === '0' ||
+        element.hidden ||
+        element.hasAttribute('hidden')) {
+        return false;
+    }
+
+    // 親要素も再帰的にチェック（ただし、body要素まで）
+    if (element.parentElement && element.parentElement !== document.body) {
+        return isElementVisible(element.parentElement);
+    }
+
+    return true;
 }
 
 function escapeRegExp(string) {
@@ -510,6 +521,10 @@ function injectStyles(colors) {
         .chroma-highlight-active { 
             outline: 2px solid #FF0000 !important; 
             box-shadow: 0 0 5px #FF0000; 
+        }
+        .chroma-input-converted {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     `;
     document.head.appendChild(style);
@@ -544,12 +559,12 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             isRegexMode: message.isRegexMode,
             colors: colors
         };
-        
+
         console.log('Search context updated:', currentSearchContext);
 
-        replaceTextareasWithEditableDivs();
+        // textarea置換は行わず、通常のハイライトのみ
         const result = highlightText(currentSearchContext.terms, currentSearchContext.isRegexMode, currentSearchContext.colors);
-        
+
         sendResponse(result);
         return true;
 
@@ -569,7 +584,7 @@ function initializeContentScript() {
     console.log('Content script initialized.');
 
     // 拡張機能のポップアップ内では実行しない
-    if (window.location.href.includes('extension://') || 
+    if (window.location.href.includes('extension://') ||
         window.location.protocol === 'moz-extension:' ||
         document.title.includes('popup') ||
         document.body.offsetWidth < 500 && document.body.offsetHeight < 600) {
@@ -577,62 +592,21 @@ function initializeContentScript() {
         return;
     }
 
-    // jQueryのval()メソッドをグローバルにフック
-    if (window.jQuery) {
-        const originalVal = window.jQuery.fn.val;
-        window.jQuery.fn.val = function (value) {
-            const result = originalVal.apply(this, arguments);
-            if (arguments.length > 0) {
-                // 値が設定された場合、対応するeditableDivを更新
-                this.each(function () {
-                    if (this.tagName === 'TEXTAREA' && this.dataset.isReplaced === 'true') {
-                        const editableDiv = this.nextElementSibling;
-                        if (editableDiv && editableDiv.contentEditable === 'true') {
-                            editableDiv.textContent = this.value;
-                            // ハイライトを即座に再適用
-                            if (currentSearchContext.terms.length > 0) {
-                                performReSearch();
-                            }
-                        }
-                    }
-                });
-            }
-            return result;
-        };
-    }
+    // textarea置換は行わず、通常のハイライト機能のみ提供
+    // replaceTextareasWithEditableDivs();
 
-    replaceTextareasWithEditableDivs();
-
-    // DOM変更を監視して新しいtextareaを処理
+    // DOM変更を監視して新しい要素を処理
     const observer = new MutationObserver((mutations) => {
-        let needsCheck = false;
-        
+        // 新しい要素が追加された場合のみ軽微な処理
         for (let mutation of mutations) {
-            // 新しいtextareaが追加された場合のみ処理
             if (mutation.addedNodes.length > 0) {
-                for (let addedNode of mutation.addedNodes) {
-                    if (addedNode.nodeType === Node.ELEMENT_NODE && (addedNode.querySelector('textarea:not([data-is-replaced="true"])') || addedNode.matches('textarea:not([data-is-replaced="true"])'))) {
-                        // ポップアップ関連の要素内の変更は無視
-                        const excludedSelectors = [
-                            '.modal', '.popup', '.tooltip', '.dropdown', '.overlay', '.dialog',
-                            '[role="dialog"]', '[role="alertdialog"]', '[role="tooltip"]', '[aria-modal="true"]'
-                        ];
-
-                        if (!excludedSelectors.some(selector => addedNode.closest(selector))) {
-                            needsCheck = true;
-                        }
-                    }
-                }
+                // 特別な処理は行わない
             }
-        }
-
-        if (needsCheck) {
-            replaceTextareasWithEditableDivs();
         }
     });
 
-    observer.observe(document.body, { 
-        childList: true, 
+    observer.observe(document.body, {
+        childList: true,
         subtree: true
     });
 }

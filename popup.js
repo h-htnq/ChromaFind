@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let termColorMap = {}; // 永続的な色のマッピング
     let scrollIndexes = {}; // スクロール状態
-    let debounceTimer;      // ライブ検索のためのタイマー
 
     // はっきりしたランダム色を生成（近い色を避ける）
     function getUniqueRandomColor() {
@@ -39,10 +38,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // 使用されていない色からランダム選択
                 newColor = availableColors[Math.floor(Math.random() * availableColors.length)];
             } else {
-                // 全色使用済みの場合は完全ランダム生成
-                const r = Math.floor(Math.random() * 200) + 55; // 55-255の範囲
-                const g = Math.floor(Math.random() * 200) + 55;
-                const b = Math.floor(Math.random() * 200) + 55;
+                // 全色使用済みの場合は完全ランダム生成（より明るい色）
+                const r = Math.floor(Math.random() * 136) + 120; // 120-255の範囲（より明るく）
+                const g = Math.floor(Math.random() * 136) + 120; // 120-255の範囲（より明るく）
+                const b = Math.floor(Math.random() * 136) + 120; // 120-255の範囲（より明るく）
                 newColor = `rgb(${r}, ${g}, ${b})`;
             }
 
@@ -154,13 +153,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         uniqueTerms.forEach(term => {
             const count = termCounts[term] || 0;
-            // ページ上で1つ以上見つかった単語のボタンのみ表示
+            const button = document.createElement('button');
+            
             if (count > 0) {
-                const button = document.createElement('button');
+                // 検索結果がある場合
                 button.textContent = `${term} (${count})`;
                 button.classList.add('term-button');
                 button.style.backgroundColor = termColorMap[term];
-                button.style.color = getContrastTextColor(termColorMap[term]); // 背景色に応じて文字色を決定
+                button.style.color = getContrastTextColor(termColorMap[term]);
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
 
                 button.addEventListener('click', () => {
                     scrollIndexes[term] = scrollIndexes[term] || 0;
@@ -175,8 +177,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                     scrollIndexes[term]++;
                 });
-                searchTermsContainer.appendChild(button);
+            } else {
+                // 検索結果がない場合（グレーアウト）
+                button.textContent = `${term} (未検知)`;
+                button.classList.add('term-button', 'term-button-not-found');
+                button.style.backgroundColor = '#cccccc';
+                button.style.color = '#666666';
+                button.style.opacity = '0.6';
+                button.style.cursor = 'default';
+                
+                // クリックイベントは追加しない（無効化）
             }
+            
+            searchTermsContainer.appendChild(button);
         });
     }
 
@@ -192,11 +205,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // === イベントリスナー ===
 
-    // ★★★ ライブ検索の実装 ★★★
-    // 入力があるたびに、少し遅れて検索を実行する
+    // 入力と同時に即座に検索を実行
     searchInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer); // 前のタイマーをキャンセル
-        debounceTimer = setTimeout(performSearch, 500); // 500ミリ秒後に関数を実行
+        performSearch(); // 即座に検索実行
+    });
+
+    // Enterキーでも検索を実行（改行も許可）
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            // Enterキーが押された場合も検索実行（改行は通常通り）
+            performSearch(); // 即座に検索実行
+        }
     });
 
     // Shift+Enterのリスナーは不要になったため削除
